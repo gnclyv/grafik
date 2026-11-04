@@ -50,7 +50,7 @@ small{color:#475569}
 <section class="np"><h2>🕘 Son 7 gün</h2><div id="hs"></div></section>
 </main>
 <script>
-const CONFIG={A:{min:2},B:{max:1},C:{min:2},D:{min:2},Kabinet:{max:1}},SH=['11:00','17:00'],P=Object.keys(CONFIG);
+const CONFIG={A:{min:2},B:{max:1},C:{min:2},D:{min:2},Kabinet:{max:1}},SH=['11:00','17:00'],P=Object.keys(CONFIG),POS={'11:00':['A','C','D'],'17:00':P};
 let S=JSON.parse(localStorage.rg||'null')||{staff:[],pairs:[],absent:{},plans:{}};
 const $=i=>document.getElementById(i),save=()=>localStorage.rg=JSON.stringify(S),
 esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
@@ -88,35 +88,38 @@ function gen(d,s,sh){
  S.pairs.forEach(p=>{if(here.includes(p.a)&&here.includes(p.b)){pr.push([p.a,p.b].sort());u.add(p.a);u.add(p.b)}});
  const sg=here.filter(i=>!u.has(i)).map(i=>[i]),by=(a,b)=>a.join().localeCompare(b.join());
  Object.entries(S.plans).forEach(([k,v])=>{const[kd,ks]=k.split('|');if(ks!=s||kd==d)return;
-  v.forEach(e=>{const q=e.pk||e.ids.join('+'),half=e.pk&&e.ids.length==1,sl=half?(e.pos=='B'?'BK':0):e.pos;
+  v.forEach(e=>{const q=e.pk||e.ids.join('+'),half=e.pk&&e.ids.length==1,sl=half?(e.pos=='B'?'BK':0):(!e.pk&&e.ids.length==1&&'ACD'.includes(e.pos)?'Ehtiyat':e.pos);
    if(half&&e.pos=='B')cb[e.ids[0]]=(cb[e.ids[0]]||0)+1;
    if(sl){c[q]=c[q]||{};c[q][sl]=(c[q][sl]||0)+1}})});
- const B4=['A','C','D','BK'],dn=Math.floor(Date.parse(d)/864e5),
- ps=pr.length<=4?B4.slice(0,pr.length):B4.concat(Array.from({length:pr.length-4},(_,i)=>B4[i%3]));
+ const B4=s=='11:00'?['A','C','D']:['A','C','D','BK'],dn=Math.floor(Date.parse(d)/864e5),
+ ps=pr.length<=B4.length?B4.slice(0,pr.length):B4.concat(Array.from({length:pr.length-B4.length},(_,i)=>['A','C','D'][i%3]));
  asg(pr.sort(by),ps,sh,d,c).forEach(({e,s:t})=>{const pk=e.join('+');
   if(t!='BK')return out.push({ids:e,pos:t,pk});
   const[a,b]=e,m=(cb[a]||0)-(cb[b]||0),f=sh?Math.random()<.5:m<0||(m==0&&dn%2==0);
   out.push({ids:[f?a:b],pos:'B',pk},{ids:[f?b:a],pos:'Kabinet',pk})});
- const occ=out.map(e=>e.pos),av=['B','Kabinet'].filter(p=>!occ.includes(p));
- asg(sg.sort(by),Array.from({length:Math.max(sg.length,av.length)},(_,i)=>av[i]||'Ehtiyat'),sh,d,c).forEach(({e,s:t})=>out.push({ids:e,pos:t}));
+ const occ=out.map(e=>e.pos),av=s=='11:00'?[]:['B','Kabinet'].filter(p=>!occ.includes(p));
+ asg(sg.sort(by),Array.from({length:Math.max(sg.length,av.length)},(_,i)=>av[i]||'Ehtiyat'),sh,d,c).forEach(({e,s:t})=>{
+  if(t=='Ehtiyat'){const n=x=>out.filter(o=>o.pos==x).reduce((a,o)=>a+o.ids.length,0),r=sh?Math.random()*3|0:dn;
+   t=['A','C','D'].map((x,i)=>[n(x)*10+(i+r)%3,x]).sort((a,b)=>a[0]-b[0])[0][1]}
+  out.push({ids:e,pos:t})});
  return out.map(e=>({...e,names:e.ids.map(nm)}))}
 function run(sh){const d=D();if(!d)return;SH.forEach(s=>S.plans[d+'|'+s]=gen(d,s,sh));save();all()}
-function chk(pl){
+function chk(pl,s){
  const n={},w=[],bad={};P.forEach(p=>n[p]=0);
  pl.forEach(e=>{if(n[e.pos]!=null)n[e.pos]+=e.ids.length});
- P.forEach(p=>{const c=CONFIG[p];
-  if(c.min&&n[p]<c.min){w.push(`${p}: minimum ${c.min} nəfər lazımdır (${n[p]})`);bad[p]=1}
+ POS[s].forEach(p=>{const c=CONFIG[p];
+  if(c.min&&s!='11:00'&&n[p]<c.min){w.push(`${p}: minimum ${c.min} nəfər lazımdır (${n[p]})`);bad[p]=1}
   if(c.max&&n[p]>c.max){w.push(`${p}: maksimum ${c.max} nəfər (${n[p]})`);bad[p]=1}});
  return{w,bad,n}}
 function card(e,i,s){
  const pr=e.pk||e.ids.length>1,h=hue(e.pk||e.ids.join('+'));
- return `<div class="card" style="border-color:${pr?`hsl(${h} 70% 45%)`:'#94a3b8'};background:${pr?`hsl(${h} 80% 92%)`:'#fff'}">${e.names.map(esc).join(' + ')}<select class="np" onchange="mv('${s}',${i},this.value)">`+(e.ids.length>1?P:P.concat('Ehtiyat')).map(p=>`<option${p==e.pos?' selected':''}>${p}</option>`).join('')+'</select></div>'}
+ return `<div class="card" style="border-color:${pr?`hsl(${h} 70% 45%)`:'#94a3b8'};background:${pr?`hsl(${h} 80% 92%)`:'#fff'}">${e.names.map(esc).join(' + ')}<select class="np" onchange="mv('${s}',${i},this.value)">`+POS[s].map(p=>`<option${p==e.pos?' selected':''}>${p}</option>`).join('')+'</select></div>'}
 function mv(s,i,v){S.plans[D()+'|'+s][i].pos=v;save();rd();hs()}
 function rd(){
  const d=D();let h='';
  SH.forEach(s=>{const pl=S.plans[d+'|'+s];h+=`<h2><span class="badge">${s} smeni</span><span class="date">${fmt(d)}</span></h2>`;
   if(!pl){h+='<p class="hint">Qrafik yoxdur</p>';return}
-  const k=chk(pl),cols=P.concat(pl.some(e=>e.pos=='Ehtiyat')?['Ehtiyat']:[]);
+  const k=chk(pl,s),cols=POS[s].concat(P.concat('Ehtiyat').filter(p=>!POS[s].includes(p)&&pl.some(e=>e.pos==p)));
   h+=k.w.map(x=>`<div class="warn">⚠ ${esc(x)}</div>`).join('')+'<div class="w"><table><tr>'+cols.map(p=>`<th>${p}${k.n[p]!=null?` (${k.n[p]})`:''}</th>`).join('')+'</tr><tr>'+cols.map(p=>`<td class="${k.bad[p]?'bad':''}">`+pl.map((e,i)=>e.pos==p?card(e,i,s):'').join('')+'</td>').join('')+'</tr></table></div><br>'});
  $('out').innerHTML=h}
 function hs(){
