@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ofisiant Qrafiki</title>
+<style>
+*{box-sizing:border-box}
+:root{--p:#2563eb;--bd:#e5e7eb}
+body{font:15px/1.4 system-ui,-apple-system,sans-serif;margin:0;background:#f1f5f9;color:#1e293b}
+header{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;padding:16px 14px}
+header h1{margin:0;font-size:21px}header p{margin:2px 0 0;opacity:.85;font-size:13px}
+main{max-width:1100px;margin:auto;padding:12px}
+section{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px #0f172a14}
+h2{margin:0 0 10px;font-size:17px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+h3{margin:14px 0 6px;font-size:14px;color:#475569}
+.hint{font-size:13px;color:#64748b;margin-bottom:6px}
+button,select,input{font:inherit;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:inherit}
+button{cursor:pointer;background:var(--p);color:#fff;border-color:var(--p);font-weight:600}
+button:hover{filter:brightness(.95)}
+button.g{background:#fff;color:#334155;border-color:#cbd5e1}
+button.r{background:#dc2626;border-color:#dc2626}
+button.ok{background:#dcfce7;color:#166534;border-color:#86efac}
+button.no{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.st{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:10px;margin:6px 0}
+.st b{flex:1;min-width:120px}
+.badge{background:#1e293b;color:#fff;border-radius:999px;padding:3px 12px;font-size:14px}
+.date{color:#64748b;font-weight:500;font-size:15px}
+.w{overflow-x:auto;border-radius:10px;border:1px solid var(--bd)}
+table{border-collapse:collapse;width:100%;min-width:680px}
+th,td{padding:8px;vertical-align:top;width:20%;border-left:1px solid var(--bd)}
+th{background:#1e293b;color:#fff;font-weight:600;text-align:center}
+th:first-child,td:first-child{border-left:0}
+td{background:#f8fafc;min-height:60px}
+td.bad{background:#fef2f2}
+.card{border:2px solid;border-radius:10px;padding:8px;margin-bottom:8px;font-weight:600;box-shadow:0 1px 2px #0001}
+.card select{width:100%;margin-top:6px;font-size:13px;padding:4px 6px}
+.warn{background:#fee2e2;color:#b91c1c;font-weight:600;margin:6px 0;padding:8px 10px;border-radius:8px;border:1px solid #fca5a5}
+small{color:#475569}
+@media print{.np{display:none}body{background:#fff}header{background:#fff;color:#000;padding:0}section{box-shadow:none}}
+</style></head><body>
+<header><h1>🍽 Ofisiant qrafiki</h1><p>Günlük pozisiya bölgüsü · 11:00 və 17:00 smenləri</p></header>
+<main>
+<section class="np"><h2>👥 Ofisiantlar</h2>
+<div class="row"><input id="nn" placeholder="Ad Soyad" style="flex:1;min-width:160px"><button onclick="addS()">+ Əlavə et</button></div>
+<div id="st"></div>
+<h3>🔗 Cüt yarat</h3>
+<div class="row"><select id="pa"></select><select id="pb"></select><button onclick="addP()">Cüt yarat</button></div>
+<div id="pl"></div></section>
+<section><div class="row np"><input type="date" id="dt"><button onclick="run(0)">Qrafik yarat</button><button class="g" onclick="run(1)">🔀 Yenidən qarışdır</button><button class="g" onclick="print()">🖨 Çap et</button></div>
+<div id="out"></div></section>
+<section class="np"><h2>🕘 Son 7 gün</h2><div id="hs"></div></section>
+</main>
+<script>
+const CONFIG={A:{min:2},B:{max:1},C:{min:2},D:{min:2},Kabinet:{max:1}},SH=['11:00','17:00'],P=Object.keys(CONFIG);
+let S=JSON.parse(localStorage.rg||'null')||{staff:[],pairs:[],absent:{},plans:{}};
+const $=i=>document.getElementById(i),save=()=>localStorage.rg=JSON.stringify(S),
+esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),
+uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+nm=id=>(S.staff.find(x=>x.id==id)||{name:'?'}).name,
+D=()=>$('dt').value,fmt=d=>d.split('-').reverse().join('.'),
+inPair=id=>S.pairs.find(p=>p.a==id||p.b==id),
+hue=s=>Math.abs([...s].reduce((a,c)=>a*31+c.charCodeAt(0)|0,7))%360,
+op=(l,s)=>l.map(x=>`<option value="${x.id}"${x.id==s?' selected':''}>${esc(x.name)}</option>`).join('');
+const all=()=>{rs();rd();hs()};
+function addS(){const n=$('nn').value.trim();if(!n)return;S.staff.push({id:uid(),name:n});$('nn').value='';save();all()}
+function delS(id){S.staff=S.staff.filter(x=>x.id!=id);S.pairs=S.pairs.filter(p=>p.a!=id&&p.b!=id);save();all()}
+function ab(id,s){const k=D()+'|'+s,a=S.absent[k]||[];S.absent[k]=a.includes(id)?a.filter(x=>x!=id):[...a,id];save();all()}
+function addP(){const a=$('pa').value,b=$('pb').value;if(!a||!b||a==b)return alert('İki fərqli ofisiant seçin');S.pairs.push({id:uid(),a,b});save();all()}
+function savP(id){const a=$('ea'+id).value,b=$('eb'+id).value;
+ if(a==b||S.pairs.find(q=>q.id!=id&&[q.a,q.b].some(x=>x==a||x==b)))return alert('Seçim yanlışdır');
+ const p=S.pairs.find(q=>q.id==id);p.a=a;p.b=b;save();all()}
+function dis(id){S.pairs=S.pairs.filter(p=>p.id!=id);save();all()}
+function delP(id){const p=S.pairs.find(q=>q.id==id);if(!confirm('Cüt və hər iki ofisiant silinsin?'))return;S.pairs=S.pairs.filter(q=>q.id!=id);S.staff=S.staff.filter(x=>x.id!=p.a&&x.id!=p.b);save();all()}
+function rs(){
+ const d=D();
+ $('st').innerHTML=`<div class="hint">${fmt(d)} tarixi üçün hər smenə gəlib-gəlməməni seçin:</div>`+(S.staff.map(x=>`<div class="st"><b>${esc(x.name)}${inPair(x.id)?' 🔗':''}</b>`+SH.map(s=>{const a=(S.absent[d+'|'+s]||[]).includes(x.id);return `<button class="${a?'no':'ok'}" onclick="ab('${x.id}','${s}')">${s} smeni: ${a?'❌ yoxdur':'✅ işləyir'}</button>`}).join('')+`<button class="g" onclick="delS('${x.id}')">🗑</button></div>`).join('')||'Ofisiant yoxdur');
+ const free=S.staff.filter(x=>!inPair(x.id));
+ $('pa').innerHTML=op(free);$('pb').innerHTML=op(free);if(free[1])$('pb').value=free[1].id;
+ $('pl').innerHTML=S.pairs.map(p=>{const l=S.staff.filter(x=>x.id==p.a||x.id==p.b||!inPair(x.id));
+  return `<div class="row"><select id="ea${p.id}">${op(l,p.a)}</select>+<select id="eb${p.id}">${op(l,p.b)}</select><button onclick="savP('${p.id}')">Saxla</button><button class="g" onclick="dis('${p.id}')">Poz</button><button class="r" onclick="delP('${p.id}')">Sil</button></div>`}).join('')}
+function asg(u,sl,sh,d,c){
+ if(!u.length)return[];
+ if(sh)u=u.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+ const L=sl.length,b=Math.floor(Date.parse(d)/864e5)%L;let best=0,bc=1e9;
+ for(let o=0;o<L;o++){const k=sh?Math.random():u.reduce((t,e,i)=>t+((c[e.join('+')]||{})[sl[(i+o)%L]]||0),0)*100+(o-b+L)%L;if(k<bc){bc=k;best=o}}
+ return u.map((e,i)=>({e,s:sl[(i+best)%L]}))}
+function gen(d,s,sh){
+ const ab=S.absent[d+'|'+s]||[],here=S.staff.map(x=>x.id).filter(i=>!ab.includes(i)),u=new Set(),pr=[],c={},cb={},out=[];
+ S.pairs.forEach(p=>{if(here.includes(p.a)&&here.includes(p.b)){pr.push([p.a,p.b].sort());u.add(p.a);u.add(p.b)}});
+ const sg=here.filter(i=>!u.has(i)).map(i=>[i]),by=(a,b)=>a.join().localeCompare(b.join());
+ Object.entries(S.plans).forEach(([k,v])=>{const[kd,ks]=k.split('|');if(ks!=s||kd==d)return;
+  v.forEach(e=>{const q=e.pk||e.ids.join('+'),half=e.pk&&e.ids.length==1,sl=half?(e.pos=='B'?'BK':0):e.pos;
+   if(half&&e.pos=='B')cb[e.ids[0]]=(cb[e.ids[0]]||0)+1;
+   if(sl){c[q]=c[q]||{};c[q][sl]=(c[q][sl]||0)+1}})});
+ const B4=['A','C','D','BK'],dn=Math.floor(Date.parse(d)/864e5),
+ ps=pr.length<=4?B4.slice(0,pr.length):B4.concat(Array.from({length:pr.length-4},(_,i)=>B4[i%3]));
+ asg(pr.sort(by),ps,sh,d,c).forEach(({e,s:t})=>{const pk=e.join('+');
+  if(t!='BK')return out.push({ids:e,pos:t,pk});
+  const[a,b]=e,m=(cb[a]||0)-(cb[b]||0),f=sh?Math.random()<.5:m<0||(m==0&&dn%2==0);
+  out.push({ids:[f?a:b],pos:'B',pk},{ids:[f?b:a],pos:'Kabinet',pk})});
+ const occ=out.map(e=>e.pos),av=['B','Kabinet'].filter(p=>!occ.includes(p));
+ asg(sg.sort(by),Array.from({length:Math.max(sg.length,av.length)},(_,i)=>av[i]||'Ehtiyat'),sh,d,c).forEach(({e,s:t})=>out.push({ids:e,pos:t}));
+ return out.map(e=>({...e,names:e.ids.map(nm)}))}
+function run(sh){const d=D();if(!d)return;SH.forEach(s=>S.plans[d+'|'+s]=gen(d,s,sh));save();all()}
+function chk(pl){
+ const n={},w=[],bad={};P.forEach(p=>n[p]=0);
+ pl.forEach(e=>{if(n[e.pos]!=null)n[e.pos]+=e.ids.length});
+ P.forEach(p=>{const c=CONFIG[p];
+  if(c.min&&n[p]<c.min){w.push(`${p}: minimum ${c.min} nəfər lazımdır (${n[p]})`);bad[p]=1}
+  if(c.max&&n[p]>c.max){w.push(`${p}: maksimum ${c.max} nəfər (${n[p]})`);bad[p]=1}});
+ return{w,bad,n}}
+function card(e,i,s){
+ const pr=e.pk||e.ids.length>1,h=hue(e.pk||e.ids.join('+'));
+ return `<div class="card" style="border-color:${pr?`hsl(${h} 70% 45%)`:'#94a3b8'};background:${pr?`hsl(${h} 80% 92%)`:'#fff'}">${e.names.map(esc).join(' + ')}<select class="np" onchange="mv('${s}',${i},this.value)">`+(e.ids.length>1?P:P.concat('Ehtiyat')).map(p=>`<option${p==e.pos?' selected':''}>${p}</option>`).join('')+'</select></div>'}
+function mv(s,i,v){S.plans[D()+'|'+s][i].pos=v;save();rd();hs()}
+function rd(){
+ const d=D();let h='';
+ SH.forEach(s=>{const pl=S.plans[d+'|'+s];h+=`<h2><span class="badge">${s} smeni</span><span class="date">${fmt(d)}</span></h2>`;
+  if(!pl){h+='<p class="hint">Qrafik yoxdur</p>';return}
+  const k=chk(pl),cols=P.concat(pl.some(e=>e.pos=='Ehtiyat')?['Ehtiyat']:[]);
+  h+=k.w.map(x=>`<div class="warn">⚠ ${esc(x)}</div>`).join('')+'<div class="w"><table><tr>'+cols.map(p=>`<th>${p}${k.n[p]!=null?` (${k.n[p]})`:''}</th>`).join('')+'</tr><tr>'+cols.map(p=>`<td class="${k.bad[p]?'bad':''}">`+pl.map((e,i)=>e.pos==p?card(e,i,s):'').join('')+'</td>').join('')+'</tr></table></div><br>'});
+ $('out').innerHTML=h}
+function hs(){
+ const ds=[...new Set(Object.keys(S.plans).map(k=>k.split('|')[0]))].sort().reverse().slice(0,7);
+ $('hs').innerHTML=ds.map(d=>`<div class="row"><button class="g" onclick="go('${d}')">${fmt(d)}</button><small>`+esc(SH.map(s=>{const p=S.plans[d+'|'+s];return p?s+' smeni: '+P.concat('Ehtiyat').map(q=>{const t=p.filter(e=>e.pos==q);return t.length?q+'='+t.map(e=>e.names.join('+')).join(','):''}).filter(Boolean).join('; '):''}).filter(Boolean).join(' | '))+'</small></div>').join('')||'Tarixçə boşdur'}
+function go(d){$('dt').value=d;all()}
+$('dt').value=new Date().toLocaleDateString('sv');$('dt').onchange=all;all();
+</script></body></html>
